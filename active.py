@@ -5,12 +5,12 @@ from email.mime.text import MIMEText
 from email.utils import parseaddr, formataddr
 import time
 import xlrd
-from .SMS import sms_send
-from .chinese_calendar.utils import is_workday, is_holiday
-from .TimerTask import timer
+from SMS import sms_send
+from chinese_calendar.utils import is_workday, is_holiday
+from TimerTask import timer
 
 # 全局数据库链接
-from .sms_query import create_init, data_query
+from sms_query import create_init, data_query
 from duanxinstone import stoneobject, EmployeeInfo, Birthlist, Divisionlist, DivisionTable
 from sqlalchemy import text, and_
 
@@ -59,8 +59,10 @@ def crete_emp_info():
                         setattr(empinfo, col, None)
                 elif col == 'code' or col == 'Tel':
                     # 0开始的工号处理
-                    if len(str(int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j])))) < 10 and col == 'code':
-                        setattr(empinfo, col, '0' + str(int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j]))))
+                    if len(str(int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j])))) < 10 \
+                            and col == 'code':
+                        setattr(empinfo, col, '0' + str(int(
+                            one_or_none(workbook.sheet_by_name(one)._cell_values[i][j]))))
                     else:
                         setattr(empinfo, col, int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j])))
                 elif col == 'name':
@@ -135,7 +137,7 @@ def unloading(i, today):
         birth.code = one.code
         birth.birthDate = one.birthDate
         birth.Tel = one.Tel
-        birth.flagnum=today.month
+        birth.flagnum = today.month
         birth.date = today + datetime.timedelta(days=i)
         birth.status = True
         # 可能会出现重复值
@@ -241,7 +243,7 @@ def draw(today):
     else:
         shengri = shengri + brithstr + '  </tbody> </table>'
     # 司龄
-    siling = """
+    silingstr = """
     <table width="580" border="1" align="center"><caption>
       司龄名单
     </caption>
@@ -261,17 +263,18 @@ def draw(today):
             # print(one)
             str1 = r'<tr>      <td width="20%" align="center">{0}</td>      <td width="20%" align="center">{1}</td>  ' \
                  r'    <td width="20%" align="center">{2}</td>    <td width="20%" align="center">{3}</td>   ' \
-                 r'<td width="20%" align="center">{4}</td> </tr>'.format(one.code, one.name, one.date, one.flagnum, one.Tel)
+                 r'<td width="20%" align="center">{4}</td> </tr>'.format(one.code, one.name, one.date,
+                                                                         one.flagnum, one.Tel)
             # print(str1)
             slstr = slstr + str1
     if slstr == '':
-        siling = siling + '<tr><td colspan=5 align="center">无人员</td></tr>' + '</tbody> </table>'
+        silingstr = silingstr + '<tr><td colspan=5 align="center">无人员</td></tr>' + '</tbody> </table>'
     else:
-        siling = siling+slstr + '  </tbody></table>'
-    wishbrithstr = html + shengri + siling + '</body></html>'
-    print(wishbrithstr)
+        silingstr = silingstr+slstr + '  </tbody></table>'
+    wish = html + shengri + silingstr + '</body></html>'
+    print(wish)
     # print('生日祝福短信 {0}'.format(datetime.date.today()))
-    send("祝福短信{day}".format(day=datetime.date.today()), wishbrithstr)
+    send("祝福短信{day}".format(day=datetime.date.today()), wish)
 
 def clear_stone(today):
     for i in range(Days):
@@ -281,23 +284,23 @@ def clear_stone(today):
             and_(DivisionTable.date == today + datetime.timedelta(days=i), DivisionTable.status == True)).delete()
 
 def smsdraw(today):
-    brithstr=data_query(stone, brith, Birthlist,today)
-    i=sms_send(brithstr[0],brithstr[1])
-    silingstr=data_query(stone, siling, DivisionTable,today)
-    j=sms_send(silingstr[0], silingstr[1])
-    sendstr="共计有{sum}条短信没有发出，其中生日有{brith}没有发出，司龄有{siling}没有发出".format(
-        sum=i + j , brith=i,siling=j)
+    brithstr = data_query(stone, brith, Birthlist, today)
+    i = sms_send(brithstr[0], brithstr[1])
+    silingstr = data_query(stone, siling, DivisionTable, today)
+    j = sms_send(silingstr[0], silingstr[1])
+    sendstr = "共计有{sum}条短信没有发出，其中生日有{brith}没有发出，司龄有{silingnum}没有发出".format(
+        sum=i + j, brith=i, silingnum=j)
     print(sendstr)
     if i + j != 0:
-        send("祝福短信{day}".format(day=datetime.date.today()),sendstr,to_address=error_addr)
-    pass
+        send("祝福短信{day}".format(day=datetime.date.today()), sendstr, to_address=error_addr)
+
 
 if __name__ == '__main__':
     init()
     Targettimestr = input('请输入定点时间，例如8:00')
-    siling,brith=create_init()
+    siling, brith = create_init()
     if Targettimestr == '':
-        Targettimestr='8:00'
+        Targettimestr = '8:00'
     Targettime = datetime.time(int(Targettimestr.split(':')[0]), int(Targettimestr.split(':')[1]))
     while True:
         if datetime.datetime.now().hour == Targettime.hour:
