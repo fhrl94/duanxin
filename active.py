@@ -285,13 +285,21 @@ def clear_stone(today):
 
 def smsdraw(today):
     brithstr = data_query(stone, brith, Birthlist, today)
-    i = sms_send(brithstr[0], brithstr[1])
+    if len(brithstr[0]) != 0:
+        i = sms_send(brithstr[0], brithstr[1])
+    else:
+        print("无生日人员")
+        i = 0
     silingstr = data_query(stone, siling, DivisionTable, today)
-    j = sms_send(silingstr[0], silingstr[1])
-    sendstr = "共计有{sum}条短信没有发出，其中生日有{brith}没有发出，司龄有{silingnum}没有发出".format(
-        sum=i + j, brith=i, silingnum=j)
-    print(sendstr)
+    if len(silingstr) != 0:
+        j = sms_send(silingstr[0], silingstr[1])
+    else:
+        print("无司龄人员")
+        j = 0
     if i + j != 0:
+        sendstr = "共计有{sum}条短信没有发出，其中生日有{brith}没有发出，司龄有{silingnum}没有发出".format(
+            sum=i + j, brith=i, silingnum=j)
+        print(sendstr)
         send("祝福短信{day}".format(day=datetime.date.today()), sendstr, to_address=error_addr)
 
 
