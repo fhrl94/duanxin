@@ -315,8 +315,8 @@ def smsdraw(today):
 def main():
     init()
     targettimestr = input('请输入定点时间，例如8:00')
-    if targettimestr is None:
-        conf.get(section='time', option='now')
+    if targettimestr == '':
+        targettimestr = conf.get(section='time', option='now')
     # if targettimestr == '':
     #     targettimestr = '8:00'
     targettime = datetime.time(int(targettimestr.split(':')[0]), int(targettimestr.split(':')[1]))
