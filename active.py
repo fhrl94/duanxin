@@ -58,21 +58,21 @@ def crete_emp_info():
             for j, col in enumerate(cols):
                 print(j)
                 if col == 'enterdate' or col == 'Divisiondates' or col == 'birthDate' or col == 'leaveDate':
-                    if one_or_none(workbook.sheet_by_name(one)._cell_values[i][j]):
+                    if one_or_none(workbook.sheet_by_name(one).cell_value(i, j)):
                         setattr(empinfo, col, datetime.datetime.strptime(
-                            workbook.sheet_by_name(one)._cell_values[i][j], '%Y-%m-%d'))
+                            workbook.sheet_by_name(one).cell_value(i, j), '%Y-%m-%d'))
                     else:
                         setattr(empinfo, col, None)
                 elif col == 'code' or col == 'Tel':
                     # 0开始的工号处理
-                    if len(str(int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j])))) < 10 \
+                    if len(str(int(one_or_none(workbook.sheet_by_name(one).cell_value(i, j))))) < 10 \
                             and col == 'code':
                         setattr(empinfo, col, '0' + str(int(
-                            one_or_none(workbook.sheet_by_name(one)._cell_values[i][j]))))
+                            one_or_none(workbook.sheet_by_name(one).cell_value(i, j)))))
                     else:
-                        setattr(empinfo, col, int(one_or_none(workbook.sheet_by_name(one)._cell_values[i][j])))
+                        setattr(empinfo, col, int(one_or_none(workbook.sheet_by_name(one).cell_value(i, j))))
                 elif col == 'name':
-                    setattr(empinfo, col, one_or_none(workbook.sheet_by_name(one)._cell_values[i][j]))
+                    setattr(empinfo, col, one_or_none(workbook.sheet_by_name(one).cell_value(i, j)))
             # print(empinfo.__dict__)
             # print(type(empinfo))
             stone.add(empinfo)
