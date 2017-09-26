@@ -328,7 +328,7 @@ def main():
                 unloading(i, date)
             if is_workday(date):
                 draw(date)
-            # smsdraw(date)
+            smsdraw(date)
             clear_stone(date)
             print(timer(targettime))
             time.sleep(timer(targettime))
