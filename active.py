@@ -1,3 +1,4 @@
+import configparser
 import datetime
 import smtplib
 from email.header import Header
@@ -14,12 +15,17 @@ from sms_query import create_init, data_query
 from duanxinstone import stoneobject, EmployeeInfo, Birthlist, Divisionlist, DivisionTable
 from sqlalchemy import text, and_
 
-global from_addr, password, to_addr, error_addr
-from_addr = input("请输入发件人邮箱")
-password = input("请输入发件人邮箱密码")
-to_addr = input("请输入收件人邮箱")
-error_addr = input("请输入异常收件人邮箱")
+global from_addr, password, to_addr, error_addr, siling, brith, stone
 stone = stoneobject()
+siling, brith = create_init()
+conf = configparser.ConfigParser()
+conf.read("duanxin.conf")
+from_addr = conf.get(section='options', option='from_addr')
+password = conf.get(section='options', option='password')
+to_addr = conf.get(section='options', option='to_addr')
+error_addr = conf.get(section='options', option='error_addr')
+print(from_addr, password, to_addr, error_addr)
+
 def init():
     # 清空所有数据
     stone.query(EmployeeInfo).delete()
@@ -72,6 +78,7 @@ def crete_emp_info():
             stone.add(empinfo)
         stone.commit()
 
+
 # 将人员信息放置Divisionlist
 def preprocessing():
     result = stone.query(EmployeeInfo).filter(EmployeeInfo.leaveDate != None).all()
@@ -110,6 +117,7 @@ def workexec(today):
         march_first = today+datetime.timedelta(days=Days)
         if is_workday(march_first):
             break
+
 
 # 生日祝福转存，司龄转存
 # 装饰器待开发
@@ -161,11 +169,8 @@ def unloading(i, today):
         division.Tel = one.Tel
         division.flagnum = today.year - one.realityenterdate.year
         division.date = today + datetime.timedelta(days=i)
-        if division.flagnum > 1:
-            division.status = True
-        else:
-            division.status = None
-        # 可能会出现重复值
+        division.status = True
+        # 可能会出现重复值(删除之前存档)
         stone.add(division)
     stone.commit()
     # print("____")
@@ -175,12 +180,14 @@ def unloading(i, today):
     # for one in Result:
     #     print(one)
 
+
 def _format_addr(s):
     name, addr = parseaddr(s)
     return formataddr((Header(name, 'utf-8').encode(), addr))
 
+
 #     邮件发送
-def send(header, body, to_address=to_addr):
+def send(header, body, to_address):
     # smtp_server =r'smtp.qq.com'
     # 企业邮箱
     smtp_server = r'smtp.qiye.163.com'
@@ -274,7 +281,8 @@ def draw(today):
     wish = html + shengri + silingstr + '</body></html>'
     print(wish)
     # print('生日祝福短信 {0}'.format(datetime.date.today()))
-    send("祝福短信{day}".format(day=datetime.date.today()), wish)
+    send("祝福短信{day}".format(day=datetime.date.today()), wish, to_address=to_addr)
+
 
 def clear_stone(today):
     for i in range(Days):
@@ -282,6 +290,7 @@ def clear_stone(today):
             and_(Birthlist.date == today + datetime.timedelta(days=i), Birthlist.status == True)).delete()
         stone.query(DivisionTable).filter(
             and_(DivisionTable.date == today + datetime.timedelta(days=i), DivisionTable.status == True)).delete()
+
 
 def smsdraw(today):
     brithstr = data_query(stone, brith, Birthlist, today)
@@ -303,26 +312,41 @@ def smsdraw(today):
         send("祝福短信{day}".format(day=datetime.date.today()), sendstr, to_address=error_addr)
 
 
-if __name__ == '__main__':
+def main():
     init()
-    Targettimestr = input('请输入定点时间，例如8:00')
-    siling, brith = create_init()
-    if Targettimestr == '':
-        Targettimestr = '8:00'
-    Targettime = datetime.time(int(Targettimestr.split(':')[0]), int(Targettimestr.split(':')[1]))
+    targettimestr = input('请输入定点时间，例如8:00')
+    if targettimestr is None:
+        conf.get(section='time', option='now')
+    # if targettimestr == '':
+    #     targettimestr = '8:00'
+    targettime = datetime.time(int(targettimestr.split(':')[0]), int(targettimestr.split(':')[1]))
     while True:
-        if datetime.datetime.now().hour == Targettime.hour:
+        if datetime.datetime.now().hour == targettime.hour:
             date = datetime.date.today()+datetime.timedelta(days=0)
             workexec(date)
             for i in range(Days):
                 unloading(i, date)
             if is_workday(date):
                 draw(date)
-            # smsdraw
-            smsdraw(date)
+            # smsdraw(date)
             clear_stone(date)
-            print(timer(Targettime))
-            time.sleep(timer(Targettime))
+            print(timer(targettime))
+            time.sleep(timer(targettime))
         else:
-            print(timer(Targettime))
-            time.sleep(timer(Targettime))
+            print(timer(targettime))
+            time.sleep(timer(targettime))
+
+
+if __name__ == '__main__':
+    """
+    1、清理历史数据（ EmployeeInfo Divisionlist Birthlist DivisionTable）
+    2、将excel表中的 数据转存到 SQLLITE 中 EmployeeInfo，同时预处理司龄数据存储至 Divisionlist
+    3、确定明天是否是工作日，若不是，全局Day=0；若Day等于非工作日长度
+    4、根据Day长度，存储相关长度日期的人员信息从 EmployeeInfo 和 Divisionlist 至 Birthlist 与 DivisionTable
+    5、发送 Birthlist、DivisionTable 存储人员信息的邮件（若非工作日，不发送邮件）
+    6、发送当日的生日短信、司龄短信
+    7、发送完成后，根据 Day 清除 Birthlist、DivisionTable的内容。
+    根据定时时间定时执行1-7，执行完成后，计算离定时时间相差秒数（timer()），然后进行休眠
+    """
+    # TODO 若模板更改，需要重新构建 Divisionlist，即删除 EmployeeInfo 中的 leaveDate 字段
+    main()
